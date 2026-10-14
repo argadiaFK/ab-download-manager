@@ -93,7 +93,10 @@ class NativeMessaging(
             path = execFile,
             type = "stdio",
             allowedOrigins = listOf(
-                SharedConstants.chromeExtensionOrigin
+                SharedConstants.chromeExtensionOrigin,
+                // Unpacked/dev build of the fork's video-download-button extension
+                // (pinned key -> stable id ladgaglhedhmogholhjcllgodbanocpd)
+                "chrome-extension://ladgaglhedhmogholhjcllgodbanocpd/"
             )
         )
     }
