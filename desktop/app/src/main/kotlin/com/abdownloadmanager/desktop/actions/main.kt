@@ -20,6 +20,7 @@ import com.abdownloadmanager.shared.action.createNewDownloadAction
 import com.abdownloadmanager.shared.action.createNewQueueAction
 import com.abdownloadmanager.shared.action.createOpenAboutPage
 import com.abdownloadmanager.shared.action.createOpenBatchDownloadAction
+import com.abdownloadmanager.shared.action.createYtDlpDownloadAction
 import com.abdownloadmanager.shared.action.createOpenOpenSourceThirdPartyLibrariesPage
 import com.abdownloadmanager.shared.action.createOpenQueuesAction
 import com.abdownloadmanager.shared.action.createOpenSettingsAction
@@ -102,4 +103,5 @@ val requestExitAction = createRequestExitAction(scope, appComponent)
 val startQueueGroupAction = createStartQueueGroupAction(scope, appComponent.downloadSystem.queueManager)
 val stopQueueGroupAction = createStopQueueGroupAction(scope, activeQueuesFlow)
 val batchDownloadAction = createOpenBatchDownloadAction(appComponent)
+val ytdlpDownloadAction = createYtDlpDownloadAction(appComponent)
 val openOpenSourceThirdPartyLibraries = createOpenOpenSourceThirdPartyLibrariesPage(appComponent)
