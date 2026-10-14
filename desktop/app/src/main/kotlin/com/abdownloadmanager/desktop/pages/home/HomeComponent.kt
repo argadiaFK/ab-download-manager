@@ -167,6 +167,7 @@ class HomeComponent(
             +newDownloadAction
             +newDownloadFromClipboardAction
             +batchDownloadAction
+            +ytdlpDownloadAction
             separator()
             +requestExitAction
 

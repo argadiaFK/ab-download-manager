@@ -22,11 +22,13 @@ import com.abdownloadmanager.desktop.pages.category.DesktopCategoryDialogManager
 import com.abdownloadmanager.desktop.pages.settings.FontManager
 import com.abdownloadmanager.shared.ui.theme.ThemeManager
 import ir.amirab.downloader.queue.QueueManager
+import ir.amirab.downloader.ytdlp.YtDlpSettingsStore
 import com.abdownloadmanager.desktop.repository.AppRepository
 import com.abdownloadmanager.desktop.storage.*
 import com.abdownloadmanager.shared.util.ui.icon.MyIcons
 import com.abdownloadmanager.shared.util.ui.theme.ISystemThemeDetector
 import com.abdownloadmanager.desktop.utils.*
+import java.io.File
 import com.abdownloadmanager.desktop.nativemessaging.NativeMessaging
 import com.abdownloadmanager.desktop.utils.proxy.AutoConfigurableProxyProviderForDesktop
 import com.abdownloadmanager.desktop.utils.proxy.DesktopSystemProxySelectorProvider
@@ -507,6 +509,11 @@ val appModule = module {
     single {
         AppInfo.definedPaths
     }.bind<DefinedPaths>()
+    single {
+        YtDlpSettingsStore(
+            appDataDir = File(get<DefinedPaths>().dataDir.toString()),
+        )
+    }
     single {
         AppRepository(
             get(),
