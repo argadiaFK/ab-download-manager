@@ -46,6 +46,7 @@ import com.abdownloadmanager.shared.util.mvi.ContainsEffects
 import com.abdownloadmanager.shared.util.mvi.supportEffects
 import com.abdownloadmanager.shared.util.notification.platformNotificationSound
 import com.abdownloadmanager.shared.util.perhostsettings.PerHostSettingsManager
+import com.abdownloadmanager.shared.pages.ytdlp.YtDlpDownloadComponent
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.childContext
 import com.arkivanov.decompose.router.children.ChildNavState
@@ -99,6 +100,7 @@ class AppComponent(
     PerHostSettingsPageManager,
     PowerActionManager,
     EnterNewURLDialogManager,
+    YtDlpDialogManager,
     SettingsPageManager,
     OpenSourceLibrariesPageManager,
     TranslatorsPageManager,
@@ -1168,6 +1170,44 @@ class AppComponent(
     override fun closeEnterNewURLWindow() {
         scope.launch {
             enterNewURLWindow.dismiss()
+        }
+    }
+
+    val ytDlpWindow = SlotNavigation<YtDlpDownloadComponent.Config>()
+    val ytDlpWindowSlot = childSlot(
+        ytDlpWindow,
+        serializer = null,
+        key = "ytDlpWindow",
+        childFactory = { config: YtDlpDownloadComponent.Config, componentContext: ComponentContext ->
+            YtDlpDownloadComponent(
+                ctx = componentContext,
+                onCloseRequest = {
+                    closeYtDlpDialog()
+                },
+            ).apply {
+                if (config.prefillUrl.isNotBlank()) {
+                    setUrl(config.prefillUrl)
+                }
+            }
+        }
+    ).subscribeAsStateFlow()
+
+    override fun openYtDlpDialog(prefillUrl: String) {
+        scope.launch {
+            ytDlpWindowSlot.value.child?.instance?.let {
+                // already open; just update the URL field
+                if (prefillUrl.isNotBlank()) {
+                    it.setUrl(prefillUrl)
+                }
+            } ?: ytDlpWindow.activate(
+                YtDlpDownloadComponent.Config(prefillUrl)
+            )
+        }
+    }
+
+    override fun closeYtDlpDialog() {
+        scope.launch {
+            ytDlpWindow.dismiss()
         }
     }
 

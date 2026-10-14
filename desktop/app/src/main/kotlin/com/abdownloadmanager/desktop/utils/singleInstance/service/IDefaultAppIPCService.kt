@@ -16,6 +16,9 @@ interface IDefaultAppIPCService {
     suspend fun addDownloadByGui(request: AddDownloadsFromIntegration)
     suspend fun addDownload(request: NewDownloadTask): Long
 
+    // yt-dlp video download (triggered e.g. by the browser extension's video button)
+    suspend fun openYtDlpDialog(url: String)
+
     suspend fun pauseDownload(ids: List<Long>)
     suspend fun resumeDownload(ids: List<Long>)
 

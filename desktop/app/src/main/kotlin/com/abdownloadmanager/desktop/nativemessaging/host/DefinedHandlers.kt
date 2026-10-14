@@ -3,6 +3,7 @@ package com.abdownloadmanager.desktop.nativemessaging.host
 import com.abdownloadmanager.desktop.utils.singleInstance.IPCServiceProviderAwakerSupport
 import com.abdownloadmanager.desktop.utils.singleInstance.service.IDefaultAppIPCService
 import com.abdownloadmanager.integration.model.AddDownloadsFromIntegration
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 class AddDownloadNativeRequestHandler(
@@ -38,13 +39,42 @@ class PingNativeRequestHandler(
     }
 }
 
+@Serializable
+data class YtDlpVideoRequest(
+    val url: String,
+)
+
+/**
+ * Handles the browser extension's IDM-style "Download video" button:
+ * opens the yt-dlp dialog in the app with the page URL prefilled.
+ */
+class YtDlpVideoNativeRequestHandler(
+    private val json: Json,
+    private val appIPC: IPCServiceProviderAwakerSupport<IDefaultAppIPCService>,
+) : NativeMessagingMessageHandler {
+    override fun accept(request: NativeMessagingMessage.Content): Boolean {
+        return request.action == "ytdlp_video"
+    }
+
+    override suspend fun handle(request: NativeMessagingMessage.Content): NativeMessagingMessage.Content {
+        val videoRequest = json.decodeFromString<YtDlpVideoRequest>(request.payload)
+        appIPC.getService().useService {
+            it.openYtDlpDialog(videoRequest.url)
+        }
+        return context(json) {
+            NativeMessagingMessage.Content.boolean(true)
+        }
+    }
+}
+
 object DefinedNativeMessagingHandlers {
     fun getAll(
         json: Json, appIPC: IPCServiceProviderAwakerSupport<IDefaultAppIPCService>,
     ): List<NativeMessagingMessageHandler> {
         return listOf(
             AddDownloadNativeRequestHandler(json, appIPC),
-            PingNativeRequestHandler(json)
+            PingNativeRequestHandler(json),
+            YtDlpVideoNativeRequestHandler(json, appIPC),
         )
     }
 }

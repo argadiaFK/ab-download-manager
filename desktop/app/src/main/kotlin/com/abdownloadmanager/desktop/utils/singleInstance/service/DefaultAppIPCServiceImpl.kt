@@ -29,6 +29,11 @@ class DefaultAppIPCServiceImpl : IDefaultAppIPCService, KoinComponent {
         integrationHandler.addDownloadByGui(request)
     }
 
+    override suspend fun openYtDlpDialog(url: String) {
+        awaitAppBoot()
+        appComponent.openYtDlpDialog(url)
+    }
+
     override suspend fun addDownload(request: NewDownloadTask): Long {
         awaitAppBoot()
         return integrationHandler.addDownload(request)
