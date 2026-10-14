@@ -1187,6 +1187,8 @@ class AppComponent(
             ).apply {
                 if (config.prefillUrl.isNotBlank()) {
                     setUrl(config.prefillUrl)
+                    // opened from the browser extension: fetch right away
+                    fetchInfo()
                 }
             }
         }
@@ -1195,9 +1197,10 @@ class AppComponent(
     override fun openYtDlpDialog(prefillUrl: String) {
         scope.launch {
             ytDlpWindowSlot.value.child?.instance?.let {
-                // already open; just update the URL field
+                // already open; just update the URL field and re-fetch
                 if (prefillUrl.isNotBlank()) {
                     it.setUrl(prefillUrl)
+                    it.fetchInfo()
                 }
             } ?: ytDlpWindow.activate(
                 YtDlpDownloadComponent.Config(prefillUrl)
