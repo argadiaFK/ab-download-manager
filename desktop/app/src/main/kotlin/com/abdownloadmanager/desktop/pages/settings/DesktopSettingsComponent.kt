@@ -14,9 +14,11 @@ import com.abdownloadmanager.shared.settings.CommonSettings
 import com.abdownloadmanager.shared.storage.impl.DNSStorage
 import com.abdownloadmanager.shared.ui.configurable.ConfigurableGroup
 import com.abdownloadmanager.shared.ui.theme.ThemeManager
+import com.abdownloadmanager.shared.util.DefinedPaths
 import com.abdownloadmanager.shared.util.proxy.ProxyManager
 import com.abdownloadmanager.shared.util.ui.icon.MyIcons
 import com.arkivanov.decompose.ComponentContext
+import ir.amirab.downloader.ytdlp.YtDlpSettingsStore
 import ir.amirab.util.compose.IconSource
 import ir.amirab.util.compose.StringSource
 import ir.amirab.util.compose.asStringSource
@@ -42,6 +44,9 @@ sealed class SettingSection(
 
     data object BrowserIntegration :
         SettingSection(MyIcons.network, Res.string.browser_integration.asStringSource())
+
+    data object YtDlp :
+        SettingSection(MyIcons.download, Res.string.ytdlp_settings_title.asStringSource())
 }
 
 interface SettingSectionGetter {
@@ -62,6 +67,8 @@ class DesktopSettingsComponent(
     private val languageManager by inject<LanguageManager>()
     private val fontManager by inject<FontManager>()
     private val customRenderApi by inject<CustomRenderApi>()
+    private val ytDlpSettingsStore by inject<YtDlpSettingsStore>()
+    private val definedPaths by inject<DefinedPaths>()
     private val allConfigs = object : SettingSectionGetter {
         override operator fun get(key: SettingSection): List<ConfigurableGroup> {
             return when (key) {
@@ -138,8 +145,21 @@ class DesktopSettingsComponent(
                     )
                 )
 
-                DownloadEngine -> listOf(
+                YtDlp -> listOf(
                     ConfigurableGroup(
+                        nestedConfigurable = listOf(
+                            YtDlpSettingsConfigurables.binaryPathConfig(ytDlpSettingsStore, scope),
+                            YtDlpSettingsConfigurables.autoDownloadBinaryConfig(ytDlpSettingsStore, scope),
+                            YtDlpSettingsConfigurables.detectedVersionConfig(
+                                ytDlpSettingsStore,
+                                definedPaths,
+                                scope
+                            ),
+                        )
+                    )
+                )
+
+                DownloadEngine -> listOf(                    ConfigurableGroup(
                         nestedConfigurable = listOf(
                             CommonSettings.defaultDownloadFolderConfig(appSettings),
                             CommonSettings.useCategoryByDefault(appSettings),
@@ -218,6 +238,7 @@ class DesktopSettingsComponent(
 //        Network,
         DownloadEngine,
         BrowserIntegration,
+        YtDlp,
     )
     private val _currentPage: MutableStateFlow<SettingSection> = MutableStateFlow(Appearance)
     val currentPage: StateFlow<SettingSection> = _currentPage.asStateFlow()
