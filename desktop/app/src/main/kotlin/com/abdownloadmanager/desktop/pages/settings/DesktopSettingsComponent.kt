@@ -150,6 +150,10 @@ class DesktopSettingsComponent(
                         nestedConfigurable = listOf(
                             YtDlpSettingsConfigurables.binaryPathConfig(ytDlpSettingsStore, scope),
                             YtDlpSettingsConfigurables.autoDownloadBinaryConfig(ytDlpSettingsStore, scope),
+                            YtDlpSettingsConfigurables.defaultDownloadFolderConfig(
+                                ytDlpSettingsStore,
+                                scope
+                            ),
                             YtDlpSettingsConfigurables.detectedVersionConfig(
                                 ytDlpSettingsStore,
                                 definedPaths,
