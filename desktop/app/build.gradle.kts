@@ -68,6 +68,7 @@ dependencies {
 
     implementation(project(":downloader:core"))
     implementation(project(":downloader:monitor"))
+    implementation(project(":downloader:ytdlp"))
 
     implementation(project(":integration:server"))
     implementation(project(":desktop:shared"))
