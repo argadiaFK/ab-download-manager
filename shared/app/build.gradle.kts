@@ -69,6 +69,7 @@ kotlin {
         val desktopMain = getByName("desktopMain")
         desktopMain.dependencies {
             implementation(libs.nucleus.darkmodeDetector)
+            implementation(project(":downloader:ytdlp"))
         }
     }
 }

@@ -20,6 +20,7 @@ import com.abdownloadmanager.desktop.pages.credits.translators.ShowTranslators
 import com.abdownloadmanager.desktop.pages.downloaderror.DownloadErrorDialog
 import com.abdownloadmanager.desktop.pages.editdownload.EditDownloadWindow
 import com.abdownloadmanager.desktop.pages.enterurl.EnterNewDownloadWindow
+import com.abdownloadmanager.desktop.pages.ytdlp.YtDlpDownloadWindow
 import com.abdownloadmanager.desktop.pages.extenallibs.ShowOpenSourceLibraries
 import com.abdownloadmanager.desktop.pages.home.HomeWindow
 import com.abdownloadmanager.desktop.pages.newQueue.NewQueueDialog
@@ -115,6 +116,7 @@ object Ui : KoinComponent {
                 BatchDownloadWindow(appComponent)
                 EditDownloadWindow(appComponent)
                 EnterNewDownloadWindow(appComponent)
+                YtDlpDownloadWindow(appComponent)
                 ShowAddDownloadDialogs(appComponent)
                 ShowDownloadDialogs(appComponent)
                 ShowCategoryDialogs(appComponent)
