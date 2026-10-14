@@ -96,7 +96,7 @@ class YtDlpDownloadComponent(
         fetchJob = scope.launch {
             try {
                 val binary = requireBinary()
-                val info = YtDlpClient { binary.absolutePath }.fetchInfo(videoUrl)
+                val info = YtDlpClient(binaryPathProvider = { binary.absolutePath }).fetchInfo(videoUrl)
                 _selectedFormatId.value = YtDlpFormatSelector.defaultFormat(info)
                 _fetchState.value = FetchState.Loaded(info)
             } catch (e: CancellationException) {
@@ -127,7 +127,7 @@ class YtDlpDownloadComponent(
                 val binary = requireBinary()
                 val template = folder.trimEnd('/', '\\') +
                     File.separator + "%(title)s [%(id)s].%(ext)s"
-                YtDlpClient { binary.absolutePath }
+                YtDlpClient(binaryPathProvider = { binary.absolutePath })
                     .download(videoUrl, format = format, outputTemplate = template)
                     .collect { progress ->
                         _downloadState.value = DownloadState.Running(progress)
