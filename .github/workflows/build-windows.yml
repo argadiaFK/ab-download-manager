@@ -1,0 +1,49 @@
+name: Build Windows
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JBR
+        uses: actions/setup-java@v4
+        with:
+          distribution: "jetbrains"
+          java-package: "jdk"
+          java-version: "25"
+          check-latest: true
+
+      - name: Cache Gradle Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: windows-2022-gradle
+          enableCrossOsArchive: true
+
+      - name: Skip Android build
+        shell: "bash"
+        run: |
+          echo "SKIP_ANDROID_BUILD=true" >> $GITHUB_ENV
+
+      - name: Build Windows package
+        shell: bash
+        run: |
+          ./gradlew createReleaseFolderForCi
+
+      - name: Stop Gradle
+        shell: bash
+        run: |
+          ./gradlew -stop
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./build/ci-release
+          name: abdm-windows
