@@ -58,8 +58,8 @@ object YtDlpSettingsConfigurables {
     }
 
     /**
-     * Default folder used for yt-dlp downloads (initial value of the
-     * download dialog's save folder). Blank = the OS Downloads folder.
+     * Default folder used for yt-dlp downloads. Blank = ABDM's built-in
+     * Videos category folder (unified with the main app).
      */
     fun defaultDownloadFolderConfig(
         store: YtDlpSettingsStore,

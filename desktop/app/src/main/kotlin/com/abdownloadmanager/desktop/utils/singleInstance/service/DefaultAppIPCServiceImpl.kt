@@ -1,6 +1,7 @@
 package com.abdownloadmanager.desktop.utils.singleInstance.service
 
 import com.abdownloadmanager.desktop.AppComponent
+import com.abdownloadmanager.desktop.storage.AppSettingsStorage
 import com.abdownloadmanager.desktop.utils.singleInstance.SingleInstanceInitialized
 import com.abdownloadmanager.integration.IntegrationHandler
 import com.abdownloadmanager.integration.model.AddDownloadsFromIntegration
@@ -8,6 +9,7 @@ import com.abdownloadmanager.integration.model.ApiQueueModel
 import com.abdownloadmanager.integration.model.NewDownloadTask
 import com.abdownloadmanager.shared.ui.widget.NotificationType
 import com.abdownloadmanager.shared.util.DefinedPaths
+import com.abdownloadmanager.shared.util.category.CategoryManager
 import ir.amirab.downloader.downloaditem.contexts.RemovedBy
 import ir.amirab.downloader.downloaditem.contexts.User
 import ir.amirab.downloader.monitor.CompletedDownloadItemState
@@ -48,6 +50,8 @@ class DefaultAppIPCServiceImpl : IDefaultAppIPCService, KoinComponent {
 
     private val ytDlpSettingsStore: YtDlpSettingsStore by inject()
     private val definedPaths: DefinedPaths by inject()
+    private val categoryManager: CategoryManager by inject()
+    private val appSettingsStorage: AppSettingsStorage by inject()
     private val ytDlpScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private fun ytDlpBinaryManager(): YtDlpBinaryManager {
@@ -58,9 +62,23 @@ class DefaultAppIPCServiceImpl : IDefaultAppIPCService, KoinComponent {
     }
 
     private fun ytDlpDefaultFolder(): String {
-        return ytDlpSettingsStore.settings.value.defaultDownloadFolder
+        // 1. explicit override from Settings → yt-dlp
+        ytDlpSettingsStore.settings.value.defaultDownloadFolder
             ?.takeIf { it.isNotBlank() }
-            ?: File(System.getProperty("user.home"), "Downloads").absolutePath
+            ?.let { return it }
+        // 2. unified with ABDM's built-in Videos category folder
+        categoryManager.categoriesFlow.value
+            .firstOrNull { it.id == 2L } // DefaultCategories "Videos"
+            ?.getDownloadPath()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { return it }
+        // 3. default category layout: <default download folder>/Videos
+        val base = appSettingsStorage.defaultDownloadFolder.value
+        if (base.isNotBlank()) {
+            return File(base, "Videos").absolutePath
+        }
+        // 4. last resort: OS Downloads folder
+        return File(System.getProperty("user.home"), "Downloads").absolutePath
     }
 
     override suspend fun fetchYtDlpInfo(url: String): YtDlpInfoIPC {
