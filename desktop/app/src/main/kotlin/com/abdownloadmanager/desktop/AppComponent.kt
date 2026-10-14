@@ -46,6 +46,7 @@ import com.abdownloadmanager.shared.util.mvi.ContainsEffects
 import com.abdownloadmanager.shared.util.mvi.supportEffects
 import com.abdownloadmanager.shared.util.notification.platformNotificationSound
 import com.abdownloadmanager.shared.util.perhostsettings.PerHostSettingsManager
+import com.abdownloadmanager.shared.pages.ytdlp.YtDlpDownloadComponent
 import com.arkivanov.decompose.ComponentContext
 import com.arkivanov.decompose.childContext
 import com.arkivanov.decompose.router.children.ChildNavState
@@ -99,6 +100,7 @@ class AppComponent(
     PerHostSettingsPageManager,
     PowerActionManager,
     EnterNewURLDialogManager,
+    YtDlpDialogManager,
     SettingsPageManager,
     OpenSourceLibrariesPageManager,
     TranslatorsPageManager,
@@ -1168,6 +1170,37 @@ class AppComponent(
     override fun closeEnterNewURLWindow() {
         scope.launch {
             enterNewURLWindow.dismiss()
+        }
+    }
+
+    val ytDlpWindow = SlotNavigation<YtDlpDownloadComponent.Config>()
+    val ytDlpWindowSlot = childSlot(
+        ytDlpWindow,
+        serializer = null,
+        key = "ytDlpWindow",
+        childFactory = { _: YtDlpDownloadComponent.Config, componentContext: ComponentContext ->
+            YtDlpDownloadComponent(
+                ctx = componentContext,
+                onCloseRequest = {
+                    closeYtDlpDialog()
+                },
+            )
+        }
+    ).subscribeAsStateFlow()
+
+    override fun openYtDlpDialog() {
+        scope.launch {
+            ytDlpWindowSlot.value.child?.instance?.let {
+                // already open; keep the existing dialog
+            } ?: ytDlpWindow.activate(
+                YtDlpDownloadComponent.Config
+            )
+        }
+    }
+
+    override fun closeYtDlpDialog() {
+        scope.launch {
+            ytDlpWindow.dismiss()
         }
     }
 
