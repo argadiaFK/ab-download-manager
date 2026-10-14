@@ -44,6 +44,64 @@ data class YtDlpVideoRequest(
     val url: String,
 )
 
+@Serializable
+data class YtDlpPanelFetchRequest(
+    val url: String,
+)
+
+@Serializable
+data class YtDlpPanelDownloadRequest(
+    val url: String,
+    val formatId: String = "best",
+    val title: String? = null,
+)
+
+/**
+ * Handles the browser extension's IDM-style panel "fetch info" request:
+ * returns the video title + trimmed format list as JSON (no dialog opened).
+ */
+class YtDlpFetchInfoNativeRequestHandler(
+    private val json: Json,
+    private val appIPC: IPCServiceProviderAwakerSupport<IDefaultAppIPCService>,
+) : NativeMessagingMessageHandler {
+    override fun accept(request: NativeMessagingMessage.Content): Boolean {
+        return request.action == "ytdlp_fetch_info"
+    }
+
+    override suspend fun handle(request: NativeMessagingMessage.Content): NativeMessagingMessage.Content {
+        val fetchRequest = json.decodeFromString<YtDlpPanelFetchRequest>(request.payload)
+        val info = appIPC.getService().useService {
+            it.fetchYtDlpInfo(fetchRequest.url)
+        }
+        return context(json) {
+            NativeMessagingMessage.Content.create(info)
+        }
+    }
+}
+
+/**
+ * Handles the browser extension's IDM-style panel "download" request:
+ * starts the download in the background (no dialog opened).
+ */
+class YtDlpDownloadNativeRequestHandler(
+    private val json: Json,
+    private val appIPC: IPCServiceProviderAwakerSupport<IDefaultAppIPCService>,
+) : NativeMessagingMessageHandler {
+    override fun accept(request: NativeMessagingMessage.Content): Boolean {
+        return request.action == "ytdlp_download"
+    }
+
+    override suspend fun handle(request: NativeMessagingMessage.Content): NativeMessagingMessage.Content {
+        val downloadRequest = json.decodeFromString<YtDlpPanelDownloadRequest>(request.payload)
+        val accepted = appIPC.getService().useService {
+            it.downloadYtDlpVideo(downloadRequest.url, downloadRequest.formatId, downloadRequest.title)
+        }
+        return context(json) {
+            NativeMessagingMessage.Content.boolean(accepted)
+        }
+    }
+}
+
 /**
  * Handles the browser extension's IDM-style "Download video" button:
  * opens the yt-dlp dialog in the app with the page URL prefilled.
@@ -75,6 +133,8 @@ object DefinedNativeMessagingHandlers {
             AddDownloadNativeRequestHandler(json, appIPC),
             PingNativeRequestHandler(json),
             YtDlpVideoNativeRequestHandler(json, appIPC),
+            YtDlpFetchInfoNativeRequestHandler(json, appIPC),
+            YtDlpDownloadNativeRequestHandler(json, appIPC),
         )
     }
 }
