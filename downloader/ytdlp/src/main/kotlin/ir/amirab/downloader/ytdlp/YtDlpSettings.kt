@@ -19,4 +19,9 @@ data class YtDlpSettings(
     val defaultFormat: String = "best",
     /** Max playlist entries fetched by --flat-playlist. */
     val maxPlaylistItems: Int = 50,
+    /**
+     * Default folder for yt-dlp downloads, shown initially in the download dialog.
+     * Null/blank = the OS Downloads folder.
+     */
+    val defaultDownloadFolder: String? = null,
 )

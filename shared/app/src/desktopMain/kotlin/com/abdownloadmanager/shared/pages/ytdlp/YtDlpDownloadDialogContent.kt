@@ -16,15 +16,20 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import com.abdownloadmanager.resources.Res
 import com.abdownloadmanager.shared.ui.widget.ActionButton
+import com.abdownloadmanager.shared.ui.widget.ExpandableItem
 import com.abdownloadmanager.shared.ui.widget.LoadingIndicator
 import com.abdownloadmanager.shared.ui.widget.MyTextFieldWithIcons
-import com.abdownloadmanager.shared.ui.widget.RadioButton
 import com.abdownloadmanager.shared.ui.widget.Text
 import com.abdownloadmanager.shared.util.div
 import com.abdownloadmanager.shared.util.ui.myColors
@@ -40,6 +45,7 @@ fun YtDlpDownloadDialogContent(component: YtDlpDownloadComponent) {
     val fetchState by component.fetchState.collectAsState()
     val downloadState by component.downloadState.collectAsState()
     val selectedFormatId by component.selectedFormatId.collectAsState()
+    val recommendedFormatId by component.recommendedFormatId.collectAsState()
     val outputFolder by component.outputFolder.collectAsState()
     val binaryStatus by component.binaryStatus.collectAsState()
 
@@ -49,7 +55,8 @@ fun YtDlpDownloadDialogContent(component: YtDlpDownloadComponent) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // URL row
+        // Step 1: video link
+        SectionHeader(myStringResource(Res.string.ytdlp_step1_link))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -85,24 +92,28 @@ fun YtDlpDownloadDialogContent(component: YtDlpDownloadComponent) {
             }
             is YtDlpDownloadComponent.FetchState.Error -> {
                 Text(state.message)
+                if (state.suggestYtDlpUpdate) {
+                    Text(
+                        myStringResource(Res.string.ytdlp_update_yt_dlp_hint),
+                        color = myColors.primary,
+                    )
+                }
             }
             is YtDlpDownloadComponent.FetchState.Loaded -> {
                 val info = state.info
+                SectionHeader(myStringResource(Res.string.ytdlp_step2_quality))
                 Text(info.displayTitle)
                 info.durationSeconds?.let { seconds ->
                     Text(formatDuration(seconds))
                 }
-                Text(myStringResource(Res.string.ytdlp_choose_format))
-                FormatList(
+                FormatDropdown(
                     formats = YtDlpFormatSelector.sortedForDisplay(info).take(30),
                     selectedFormatId = selectedFormatId,
+                    recommendedFormatId = recommendedFormatId,
                     onSelect = component::selectFormat,
                 )
-                MyTextFieldWithIcons(
-                    text = outputFolder,
-                    onTextChange = component::setOutputFolder,
-                    placeholder = myStringResource(Res.string.ytdlp_output_folder),
-                    modifier = Modifier.fillMaxWidth(),
+                Text(
+                    myStringResource(Res.string.ytdlp_saved_to) + " " + outputFolder,
                 )
             }
         }
@@ -143,44 +154,107 @@ fun YtDlpDownloadDialogContent(component: YtDlpDownloadComponent) {
 }
 
 @Composable
-private fun FormatList(
+private fun SectionHeader(text: String) {
+    Text(
+        text,
+        fontWeight = FontWeight.Bold,
+        fontSize = 15.sp,
+    )
+}
+
+@Composable
+private fun FormatDropdown(
     formats: List<YtDlpFormat>,
     selectedFormatId: String,
+    recommendedFormatId: String?,
     onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    LazyColumn(
-        Modifier
-            .fillMaxWidth()
-            .heightIn(max = 220.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        items(formats, key = { it.formatId }) { format ->
+    var expanded by remember { mutableStateOf(false) }
+    val selected = formats.firstOrNull { it.formatId == selectedFormatId }
+    ExpandableItem(
+        isExpanded = expanded,
+        modifier = modifier,
+        header = {
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clip(myShapes.defaultRounded)
-                    .clickable { onSelect(format.formatId) }
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                    .background(myColors.surface / 50)
+                    .clickable { expanded = !expanded }
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                RadioButton(
-                    value = selectedFormatId == format.formatId,
-                    onValueChange = { if (it) onSelect(format.formatId) },
-                )
                 Text(
-                    buildString {
-                        append(format.formatId)
-                        append(" • ")
-                        append(format.displayResolution)
-                        format.ext?.let { append(" • $it") }
-                        format.effectiveSize?.let { append(" • ${formatBytes(it)}") }
-                        format.formatNote?.let { append(" • $it") }
-                    },
+                    selected?.let { formatLabel(it) } ?: selectedFormatId,
                     modifier = Modifier.weight(1f),
                 )
+                if (selected != null && selected.formatId == recommendedFormatId) {
+                    RecommendedBadge()
+                }
+                Text(if (expanded) "▴" else "▾")
             }
-        }
+        },
+        body = {
+            LazyColumn(
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 220.dp)
+                    .clip(myShapes.defaultRounded)
+                    .background(myColors.surface / 30)
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                items(formats, key = { it.formatId }) { format ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelect(format.formatId)
+                                expanded = false
+                            }
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            formatLabel(format),
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (format.formatId == recommendedFormatId) {
+                            RecommendedBadge()
+                        }
+                    }
+                }
+            }
+        },
+    )
+}
+
+/** Compact one-line description: resolution • type • size • note. */
+private fun formatLabel(format: YtDlpFormat): String = buildString {
+    append(format.displayResolution)
+    format.ext?.let { append(" • $it") }
+    format.effectiveSize?.let { append(" • ${formatBytes(it)}") }
+    format.formatNote?.let { append(" • $it") }
+}
+
+@Composable
+private fun RecommendedBadge() {
+    Box(
+        Modifier
+            .clip(myShapes.defaultRounded)
+            .background(myColors.primary / 0.18f)
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            myStringResource(Res.string.ytdlp_recommended),
+            color = myColors.primary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 

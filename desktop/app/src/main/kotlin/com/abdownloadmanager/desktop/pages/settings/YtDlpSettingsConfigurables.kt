@@ -58,10 +58,29 @@ object YtDlpSettingsConfigurables {
     }
 
     /**
+     * Default folder used for yt-dlp downloads (initial value of the
+     * download dialog's save folder). Blank = the OS Downloads folder.
+     */
+    fun defaultDownloadFolderConfig(
+        store: YtDlpSettingsStore,
+        scope: CoroutineScope,
+    ): StringConfigurable {
+        return StringConfigurable(
+            title = Res.string.ytdlp_default_download_folder.asStringSource(),
+            description = Res.string.ytdlp_default_download_folder_description.asStringSource(),
+            backedBy = createMutableStateFlowFromStateFlow(
+                flow = store.settings.mapStateFlow { it.defaultDownloadFolder.orEmpty() },
+                updater = { store.update { settings -> settings.copy(defaultDownloadFolder = it.ifBlank { null }) } },
+                scope = scope,
+            ),
+            describe = { it.asStringSource() },
+        )
+    }
+
+    /**
      * Read-only row showing the detected yt-dlp version (refreshes each time
      * the settings section is opened).
-     */
-    fun detectedVersionConfig(
+     */    fun detectedVersionConfig(
         store: YtDlpSettingsStore,
         definedPaths: DefinedPaths,
         scope: CoroutineScope,

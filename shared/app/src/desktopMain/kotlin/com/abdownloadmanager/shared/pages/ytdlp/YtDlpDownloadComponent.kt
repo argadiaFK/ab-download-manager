@@ -37,7 +37,7 @@ class YtDlpDownloadComponent(
         data object Idle : FetchState
         data object Loading : FetchState
         data class Loaded(val info: YtDlpVideoInfo) : FetchState
-        data class Error(val message: String) : FetchState
+        data class Error(val message: String, val suggestYtDlpUpdate: Boolean = false) : FetchState
     }
 
     sealed interface DownloadState {
@@ -72,7 +72,10 @@ class YtDlpDownloadComponent(
         _selectedFormatId.value = formatId
     }
 
-    private val _outputFolder = MutableStateFlow(defaultOutputFolder())
+    private val _recommendedFormatId = MutableStateFlow<String?>(null)
+    val recommendedFormatId: StateFlow<String?> = _recommendedFormatId.asStateFlow()
+
+    private val _outputFolder = MutableStateFlow(initialOutputFolder())
     val outputFolder: StateFlow<String> = _outputFolder.asStateFlow()
     fun setOutputFolder(value: String) {
         _outputFolder.value = value
@@ -97,14 +100,29 @@ class YtDlpDownloadComponent(
             try {
                 val binary = requireBinary()
                 val info = YtDlpClient(binaryPathProvider = { binary.absolutePath }).fetchInfo(videoUrl)
-                _selectedFormatId.value = YtDlpFormatSelector.defaultFormat(info)
+                val recommended = YtDlpFormatSelector.defaultFormat(info)
+                _recommendedFormatId.value = recommended
+                _selectedFormatId.value = recommended
                 _fetchState.value = FetchState.Loaded(info)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _fetchState.value = FetchState.Error(e.message ?: "Unknown error")
+                val raw = e.message ?: "Unknown error"
+                _fetchState.value = FetchState.Error(raw, suggestYtDlpUpdate(raw))
             }
         }
+    }
+
+    /**
+     * Heuristic: these yt-dlp errors are almost always fixed by updating
+     * yt-dlp to the latest version.
+     */
+    private fun suggestYtDlpUpdate(message: String): Boolean {
+        val lower = message.lowercase()
+        return lower.contains("needs to be reloaded")
+            || lower.contains("sign in to confirm")
+            || lower.contains("unable to extract")
+            || lower.contains("not available")
     }
 
     fun startDownload() {
@@ -175,5 +193,11 @@ class YtDlpDownloadComponent(
         private fun defaultOutputFolder(): String {
             return File(System.getProperty("user.home"), "Downloads").absolutePath
         }
+    }
+
+    private fun initialOutputFolder(): String {
+        return settingsStore.settings.value.defaultDownloadFolder
+            ?.takeIf { it.isNotBlank() }
+            ?: defaultOutputFolder()
     }
 }
