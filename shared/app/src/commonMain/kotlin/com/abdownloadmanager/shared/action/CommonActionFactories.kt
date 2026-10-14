@@ -358,3 +358,14 @@ fun createStopAllAction(
         }
     }
 }
+
+fun createYtDlpDownloadAction(
+    ytdlpDialogManager: YtDlpDialogManager,
+): AnAction {
+    return simpleAction(
+        title = Res.string.ytdlp_download.asStringSource(),
+        icon = MyIcons.download,
+    ) {
+        ytdlpDialogManager.openYtDlpDialog()
+    }
+}
