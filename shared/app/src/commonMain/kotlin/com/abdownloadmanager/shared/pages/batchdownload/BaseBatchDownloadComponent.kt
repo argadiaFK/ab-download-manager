@@ -123,8 +123,41 @@ open class BaseBatchDownloadComponent(
         onClose()
     }
 
+    // ---- "paste a list of links" mode ----
+    private val _linkList = MutableStateFlow("")
+    val linkList = _linkList.asStateFlow()
+
+    fun setLinkList(text: String) {
+        _linkList.value = text
+    }
+
+    val linkListCount: StateFlow<Int> = linkList.mapStateFlow { parseLinkList(it).size }
+
+    val canConfirmLinkList: StateFlow<Boolean> =
+        linkListCount.mapStateFlow { it in 1..MAX_ALLOWED_RANGE }
+
+    fun confirmLinkList() {
+        val items = parseLinkList(linkList.value)
+            .take(MAX_ALLOWED_RANGE)
+            .takeIf { it.isNotEmpty() }
+            ?: return
+        importLinks(items)
+        onClose()
+    }
+
     companion object {
         const val MAX_ALLOWED_RANGE = 1000
+
+        /**
+         * Parses pasted text into distinct valid URLs, one per line.
+         */
+        fun parseLinkList(raw: String): List<String> {
+            return raw.lineSequence()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() && HttpUrlUtils.isValidUrl(it) }
+                .distinct()
+                .toList()
+        }
     }
 
     sealed interface Effects {

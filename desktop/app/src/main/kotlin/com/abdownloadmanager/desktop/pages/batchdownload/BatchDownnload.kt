@@ -30,6 +30,39 @@ import ir.amirab.util.compose.asStringSource
 fun BatchDownload(
     component: DesktopBatchDownloadComponent,
 ) {
+    var mode by remember { mutableStateOf(BatchInputMode.Wildcard) }
+    Column(Modifier.padding(16.dp)) {
+        MyTabRow {
+            MyTab(
+                selected = mode == BatchInputMode.Wildcard,
+                onClick = { mode = BatchInputMode.Wildcard },
+                icon = MyIcons.download,
+                title = Res.string.batch_download_mode_wildcard.asStringSource(),
+            )
+            MyTab(
+                selected = mode == BatchInputMode.LinkList,
+                onClick = { mode = BatchInputMode.LinkList },
+                icon = MyIcons.link,
+                title = Res.string.batch_download_mode_link_list.asStringSource(),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        when (mode) {
+            BatchInputMode.Wildcard -> WildcardBatchContent(component)
+            BatchInputMode.LinkList -> LinkListBatchContent(component)
+        }
+    }
+}
+
+private enum class BatchInputMode {
+    Wildcard,
+    LinkList,
+}
+
+@Composable
+private fun WildcardBatchContent(
+    component: DesktopBatchDownloadComponent,
+) {
     val link by component.link.collectAsState()
     val setLink = component::setLink
     val start by component.start.collectAsState()
@@ -43,7 +76,7 @@ fun BatchDownload(
     LaunchedEffect(Unit) {
         linkFocusRequester.requestFocus()
     }
-    Column(Modifier.padding(16.dp)) {
+    Column(Modifier.fillMaxSize()) {
         Row(Modifier.weight(1f)) {
             Column(
                 modifier = Modifier
@@ -183,6 +216,72 @@ fun BatchDownload(
                 text = myStringResource(Res.string.ok),
                 enabled = component.canConfirm.collectAsState().value,
                 onClick = component::confirm
+            )
+            Spacer(Modifier.width(8.dp))
+            ActionButton(myStringResource(Res.string.close), onClick = component.onClose)
+        }
+    }
+}
+
+@Composable
+private fun LinkListBatchContent(
+    component: DesktopBatchDownloadComponent,
+) {
+    val text by component.linkList.collectAsState()
+    val count by component.linkListCount.collectAsState()
+    val canConfirm by component.canConfirmLinkList.collectAsState()
+    val listFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        listFocusRequester.requestFocus()
+    }
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.weight(1f)) {
+            LabeledContent(
+                label = {
+                    Text(myStringResource(Res.string.batch_download_link_list_help))
+                },
+                content = {
+                    MyTextFieldWithIcons(
+                        text = text,
+                        onTextChange = component::setLinkList,
+                        placeholder = "https://example.com/file1.zip\nhttps://example.com/file2.zip",
+                        modifier = Modifier
+                            .focusRequester(listFocusRequester)
+                            .fillMaxWidth()
+                            .fillMaxHeight(),
+                        singleLine = false,
+                        start = {
+                            MyTextFieldIcon(MyIcons.link)
+                        },
+                        end = {
+                            MyTextFieldIcon(MyIcons.paste) {
+                                val v = ClipboardUtil.read()
+                                if (v != null) {
+                                    component.setLinkList(v)
+                                }
+                            }
+                        },
+                    )
+                }
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            myStringResource(
+                Res.string.batch_download_links_found,
+                Res.string.batch_download_links_found_createArgs(
+                    count = count.toString()
+                )
+            )
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().wrapContentWidth(Alignment.End)
+        ) {
+            ActionButton(
+                text = myStringResource(Res.string.ok),
+                enabled = canConfirm,
+                onClick = component::confirmLinkList
             )
             Spacer(Modifier.width(8.dp))
             ActionButton(myStringResource(Res.string.close), onClick = component.onClose)

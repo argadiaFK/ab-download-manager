@@ -59,18 +59,7 @@ private fun ResponsiveDialogScope.BatchDownloadPage(
     component: AndroidBatchDownloadComponent,
     onDismiss: () -> Unit,
 ) {
-    val link by component.link.collectAsState()
-    val setLink = component::setLink
-    val start by component.start.collectAsState()
-    val setStart = component::setStart
-    val end by component.end.collectAsState()
-    val setEnd = component::setEnd
-    val scrollState = rememberScrollState()
-    val validationResult by component.validationResult.collectAsState()
-    val linkFocusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        linkFocusRequester.requestFocus()
-    }
+    var mode by remember { mutableStateOf(BatchInputMode.Wildcard) }
     SheetUI(
         header = {
             SheetHeader(
@@ -86,165 +75,279 @@ private fun ResponsiveDialogScope.BatchDownloadPage(
             Modifier
                 .padding(16.dp)
         ) {
-            VerticalScrollableContent(
-                scrollState,
-                modifier = Modifier.weight(1f, false),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .verticalScroll(scrollState)
-                ) {
-                    LabeledContent(
-                        label = {
-                            Text(myStringResource(Res.string.batch_download_link_help))
-                        },
-                        content = {
-                            MyTextFieldWithIcons(
-                                text = link,
-                                onTextChange = setLink,
-                                placeholder = "https://example.com/photo-*.png",
-                                modifier = Modifier
-                                    .focusRequester(linkFocusRequester)
-                                    .fillMaxWidth(),
-                                start = {
-                                    MyTextFieldIcon(MyIcons.link)
-                                },
-                                end = {
-                                    MyTextFieldIcon(MyIcons.paste, onClick = {
-                                        val v = ClipboardUtil.read()
-                                        if (v != null) {
-                                            setLink(v)
-                                        }
-                                    })
-                                },
-                                errorText = when (val v = validationResult) {
-                                    BatchDownloadValidationResult.URLInvalid -> {
-                                        myStringResource(Res.string.invalid_url)
-                                    }
-
-                                    is BatchDownloadValidationResult.MaxRangeExceed -> myStringResource(
-                                        Res.string.list_is_too_large_maximum_n_items_allowed,
-                                        Res.string.list_is_too_large_maximum_n_items_allowed_createArgs(
-                                            count = v.allowed.toString()
-                                        )
-                                    )
-
-                                    BatchDownloadValidationResult.Others -> null
-                                    BatchDownloadValidationResult.Ok -> null
-                                }
-                            )
-                        }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    LabeledContent(
-                        label = {
-                            Text(myStringResource(Res.string.enter_range))
-                        },
-                        content = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                MyTextFieldWithIcons(
-                                    text = start,
-                                    onTextChange = setStart,
-                                    placeholder = "",
-                                    modifier = Modifier.width(90.dp),
-                                    start = {
-                                        Text(
-                                            "${myStringResource(Res.string.range_from)}:",
-                                            Modifier.padding(horizontal = 8.dp)
-                                        )
-                                    }
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("...")
-                                Spacer(Modifier.width(8.dp))
-
-                                MyTextFieldWithIcons(
-                                    text = end,
-                                    onTextChange = setEnd,
-                                    placeholder = "",
-                                    modifier = Modifier.width(90.dp),
-                                    start = {
-                                        Text(
-                                            "${myStringResource(Res.string.range_to)}:",
-                                            Modifier.padding(horizontal = 8.dp)
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    LabeledContent(
-                        label = {
-                            Text(myStringResource(Res.string.batch_download_wildcard_length))
-                        },
-                        content = {
-                            WildcardLengthUi(
-                                component.wildcardLength.collectAsState().value,
-                                component::setWildCardLength
-                            )
-                        }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val lineModifier = Modifier
-                            .height(1.dp)
-                            .padding(horizontal = 5.dp)
-                            .background(LocalContentColor.current.copy(0.05f))
-
-                        Spacer(
-                            Modifier
-                                .padding(vertical = 4.dp)
-                                .fillMaxWidth()
-                                .then(lineModifier)
-                        )
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    LabeledContent(
-                        label = {
-                            Text(myStringResource(Res.string.first_link))
-                        },
-                        content = {
-                            LinkPreview(component.startLinkResult.collectAsState().value)
-                        }
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    LabeledContent(
-                        label = {
-                            Text(myStringResource(Res.string.last_link))
-                        },
-                        content = {
-                            LinkPreview(component.endLinkResult.collectAsState().value)
-                        }
-                    )
-                }
+            MyTabRow {
+                MyTab(
+                    selected = mode == BatchInputMode.Wildcard,
+                    onClick = { mode = BatchInputMode.Wildcard },
+                    icon = MyIcons.download,
+                    title = Res.string.batch_download_mode_wildcard.asStringSource(),
+                )
+                MyTab(
+                    selected = mode == BatchInputMode.LinkList,
+                    onClick = { mode = BatchInputMode.LinkList },
+                    icon = MyIcons.link,
+                    title = Res.string.batch_download_mode_link_list.asStringSource(),
+                )
             }
             Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                val buttonModifier = Modifier.weight(1f)
-                ActionButton(
-                    myStringResource(Res.string.close),
-                    onClick = onDismiss,
-                    modifier = buttonModifier,
-                )
-                Spacer(Modifier.width(8.dp))
-                ActionButton(
-                    text = myStringResource(Res.string.ok),
-                    enabled = component.canConfirm.collectAsState().value,
-                    onClick = component::confirm,
-                    modifier = buttonModifier,
-                )
+            when (mode) {
+                BatchInputMode.Wildcard -> WildcardBatchContent(component, onDismiss)
+                BatchInputMode.LinkList -> LinkListBatchContent(component, onDismiss)
             }
         }
     }
 
+}
+
+private enum class BatchInputMode {
+    Wildcard,
+    LinkList,
+}
+
+@Composable
+private fun ResponsiveDialogScope.WildcardBatchContent(
+    component: AndroidBatchDownloadComponent,
+    onDismiss: () -> Unit,
+) {
+    val link by component.link.collectAsState()
+    val setLink = component::setLink
+    val start by component.start.collectAsState()
+    val setStart = component::setStart
+    val end by component.end.collectAsState()
+    val setEnd = component::setEnd
+    val scrollState = rememberScrollState()
+    val validationResult by component.validationResult.collectAsState()
+    val linkFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        linkFocusRequester.requestFocus()
+    }
+    VerticalScrollableContent(
+        scrollState,
+        modifier = Modifier.weight(1f, false),
+    ) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(scrollState)
+        ) {
+            LabeledContent(
+                label = {
+                    Text(myStringResource(Res.string.batch_download_link_help))
+                },
+                content = {
+                    MyTextFieldWithIcons(
+                        text = link,
+                        onTextChange = setLink,
+                        placeholder = "https://example.com/photo-*.png",
+                        modifier = Modifier
+                            .focusRequester(linkFocusRequester)
+                            .fillMaxWidth(),
+                        start = {
+                            MyTextFieldIcon(MyIcons.link)
+                        },
+                        end = {
+                            MyTextFieldIcon(MyIcons.paste, onClick = {
+                                val v = ClipboardUtil.read()
+                                if (v != null) {
+                                    setLink(v)
+                                }
+                            })
+                        },
+                        errorText = when (val v = validationResult) {
+                            BatchDownloadValidationResult.URLInvalid -> {
+                                myStringResource(Res.string.invalid_url)
+                            }
+
+                            is BatchDownloadValidationResult.MaxRangeExceed -> myStringResource(
+                                Res.string.list_is_too_large_maximum_n_items_allowed,
+                                Res.string.list_is_too_large_maximum_n_items_allowed_createArgs(
+                                    count = v.allowed.toString()
+                                )
+                            )
+
+                            BatchDownloadValidationResult.Others -> null
+                            BatchDownloadValidationResult.Ok -> null
+                        }
+                    )
+                }
+            )
+            Spacer(Modifier.height(8.dp))
+            LabeledContent(
+                label = {
+                    Text(myStringResource(Res.string.enter_range))
+                },
+                content = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        MyTextFieldWithIcons(
+                            text = start,
+                            onTextChange = setStart,
+                            placeholder = "",
+                            modifier = Modifier.width(90.dp),
+                            start = {
+                                Text(
+                                    "${myStringResource(Res.string.range_from)}:",
+                                    Modifier.padding(horizontal = 8.dp)
+                                )
+                            }
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("...")
+                        Spacer(Modifier.width(8.dp))
+
+                        MyTextFieldWithIcons(
+                            text = end,
+                            onTextChange = setEnd,
+                            placeholder = "",
+                            modifier = Modifier.width(90.dp),
+                            start = {
+                                Text(
+                                    "${myStringResource(Res.string.range_to)}:",
+                                    Modifier.padding(horizontal = 8.dp)
+                                )
+                            }
+                        )
+                    }
+                }
+            )
+            Spacer(Modifier.height(8.dp))
+            LabeledContent(
+                label = {
+                    Text(myStringResource(Res.string.batch_download_wildcard_length))
+                },
+                content = {
+                    WildcardLengthUi(
+                        component.wildcardLength.collectAsState().value,
+                        component::setWildCardLength
+                    )
+                }
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val lineModifier = Modifier
+                    .height(1.dp)
+                    .padding(horizontal = 5.dp)
+                    .background(LocalContentColor.current.copy(0.05f))
+
+                Spacer(
+                    Modifier
+                        .padding(vertical = 4.dp)
+                        .fillMaxWidth()
+                        .then(lineModifier)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            LabeledContent(
+                label = {
+                    Text(myStringResource(Res.string.first_link))
+                },
+                content = {
+                    LinkPreview(component.startLinkResult.collectAsState().value)
+                }
+            )
+            Spacer(Modifier.height(8.dp))
+            LabeledContent(
+                label = {
+                    Text(myStringResource(Res.string.last_link))
+                },
+                content = {
+                    LinkPreview(component.endLinkResult.collectAsState().value)
+                }
+            )
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+    ) {
+        val buttonModifier = Modifier.weight(1f)
+        ActionButton(
+            myStringResource(Res.string.close),
+            onClick = onDismiss,
+            modifier = buttonModifier,
+        )
+        Spacer(Modifier.width(8.dp))
+        ActionButton(
+            text = myStringResource(Res.string.ok),
+            enabled = component.canConfirm.collectAsState().value,
+            onClick = component::confirm,
+            modifier = buttonModifier,
+        )
+    }
+
+}
+
+@Composable
+private fun ResponsiveDialogScope.LinkListBatchContent(
+    component: AndroidBatchDownloadComponent,
+    onDismiss: () -> Unit,
+) {
+    val text by component.linkList.collectAsState()
+    val count by component.linkListCount.collectAsState()
+    val canConfirm by component.canConfirmLinkList.collectAsState()
+    val listFocusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        listFocusRequester.requestFocus()
+    }
+    LabeledContent(
+        label = {
+            Text(myStringResource(Res.string.batch_download_link_list_help))
+        },
+        content = {
+            MyTextFieldWithIcons(
+                text = text,
+                onTextChange = component::setLinkList,
+                placeholder = "https://example.com/file1.zip\nhttps://example.com/file2.zip",
+                modifier = Modifier
+                    .focusRequester(listFocusRequester)
+                    .fillMaxWidth()
+                    .heightIn(min = 160.dp),
+                singleLine = false,
+                start = {
+                    MyTextFieldIcon(MyIcons.link)
+                },
+                end = {
+                    MyTextFieldIcon(MyIcons.paste, onClick = {
+                        val v = ClipboardUtil.read()
+                        if (v != null) {
+                            component.setLinkList(v)
+                        }
+                    })
+                },
+            )
+        }
+    )
+    Spacer(Modifier.height(8.dp))
+    Text(
+        myStringResource(
+            Res.string.batch_download_links_found,
+            Res.string.batch_download_links_found_createArgs(
+                count = count.toString()
+            )
+        )
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+    ) {
+        val buttonModifier = Modifier.weight(1f)
+        ActionButton(
+            myStringResource(Res.string.close),
+            onClick = onDismiss,
+            modifier = buttonModifier,
+        )
+        Spacer(Modifier.width(8.dp))
+        ActionButton(
+            text = myStringResource(Res.string.ok),
+            enabled = canConfirm,
+            onClick = component::confirmLinkList,
+            modifier = buttonModifier,
+        )
+    }
 }
 
 @Composable
